@@ -1,5 +1,5 @@
-import express from 'express';
-import { userController, postController, commentController } from './controllers.js';
+const express = require('express');
+const { userController, postController, commentController } = require('./controllers.js');
 
 const router = express.Router();
 
@@ -23,4 +23,4 @@ router.post('/posts/:postId/comments', commentController.createComment);
 router.patch('/posts/:postId/comments/:commentId', commentController.updateComment);
 router.delete('/posts/:postId/comments/:commentId', commentController.deleteComment);
 
-export default router;
+module.exports = router;
