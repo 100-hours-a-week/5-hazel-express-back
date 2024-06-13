@@ -1,6 +1,21 @@
-import { getAllUsers, getUserByEmail, createUser, updateUser, deleteUser, getAllPosts, getPostById, createPost, updatePost, deletePost, getCommentsByPostId, createComment, updateComment, deleteComment } from './models.js';
+const {
+  getAllUsers,
+  getUserByEmail,
+  createUser,
+  updateUser,
+  deleteUser,
+  getAllPosts,
+  getPostById,
+  createPost,
+  updatePost,
+  deletePost,
+  getCommentsByPostId,
+  createComment,
+  updateComment,
+  deleteComment
+} = require('./models.js');
 
-export const userController = {
+const userController = {
   getAllUsers: (req, res) => {
     res.json(getAllUsers());
   },
@@ -48,7 +63,7 @@ export const userController = {
   }
 };
 
-export const postController = {
+const postController = {
   getAllPosts: (req, res) => {
     res.json(getAllPosts());
   },
@@ -74,7 +89,7 @@ export const postController = {
   }
 };
 
-export const commentController = {
+const commentController = {
   getCommentsByPostId: (req, res) => {
       try {
           const comments = getCommentsByPostId(parseInt(req.params.postId));
@@ -108,4 +123,10 @@ export const commentController = {
           res.status(500).json({ error: 'Failed to delete comment' });
       }
   }
+};
+
+module.exports = {
+  userController,
+  postController,
+  commentController
 };
