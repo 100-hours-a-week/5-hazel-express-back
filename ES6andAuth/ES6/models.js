@@ -52,7 +52,8 @@ const getAllPosts = () => readData().posts;
 const getPostById = (postId) => readData().posts.find(post => post.postId === postId);
 const createPost = (postData) => {
     const data = readData();
-    postData.postId = data.posts.length ? data.posts[data.posts.length - 1].postId + 1 : 1;
+    postData = {...postData, postId : data.posts.length != 0 ? data.posts[data.posts.length - 1].postId + 1 : 1};
+    // postData.postId = data.posts.length ? data.posts[data.posts.length - 1].postId + 1 : 1;
     data.posts.push(postData);
     writeData(data);
     return postData;
