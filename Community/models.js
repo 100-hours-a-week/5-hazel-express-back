@@ -1,35 +1,35 @@
 const fs = require('fs');
 const path = require('path');
-const { fileURLToPath } = require('url');
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // 데이터 파일 경로
 const dbFilePath = path.join(__dirname, 'DB.json');
 
 // 데이터 읽기 함수
 const readData = () => {
-    const data = fs.readFileSync(dbFilePath, 'utf8');
-    return JSON.parse(data);
+    try {
+        const data = fs.readFileSync(dbFilePath, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        console.error('Error reading data from DB.json:', error);
+        return null;
+    }
 };
 
 // 데이터 쓰기 함수
 const writeData = (data) => {
-    fs.writeFileSync(dbFilePath, JSON.stringify(data, null, 2), 'utf8');
+    try {
+        fs.writeFileSync(dbFilePath, JSON.stringify(data, null, 2), 'utf8');
+    } catch (error) {
+        console.error('Error writing data to DB.json:', error);
+    }
 };
 
 const getAllUsers = () => readData().users;
 const getUserByEmail = (email) => readData().users.find(user => user.email === email);
 const createUser = (userData) => {
-    try {
-        const data = readData();
-        data.users.push(userData);
-        writeData(data);
-    } catch (error) {
-        console.error('Error creating user:', error);
-        throw error;
-    }
+    const data = readData();
+    data.users.push(userData);
+    writeData(data);
 };
 const updateUser = (email, updatedUserData) => {
     const data = readData();
@@ -55,7 +55,6 @@ const createPost = (postData) => {
     postData.postId = data.posts.length ? data.posts[data.posts.length - 1].postId + 1 : 1;
     data.posts.push(postData);
     writeData(data);
-    return postData;
 };
 const updatePost = (postId, updatedPostData) => {
     const data = readData();
@@ -100,6 +99,8 @@ const deleteComment = (commentId) => {
 };
 
 module.exports = {
+    readData,
+    writeData,
     getAllUsers,
     getUserByEmail,
     createUser,
