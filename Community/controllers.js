@@ -1,141 +1,227 @@
-const {
-  getAllUsers,
-  getUserByEmail,
-  createUser,
-  updateUser,
-  deleteUser,
-  getAllPosts,
-  getPostById,
-  createPost,
-  updatePost,
-  deletePost,
-  getCommentsByPostId,
-  createComment,
-  updateComment,
-  deleteComment
-} = require('./models.js');
+const fs = require('fs');
+const { readData, writeData } = require('./models');
 
-const userController = {
-  login: (req, res) => {
+const login = (req, res) => {
     const { email, password } = req.body;
-    const user = getUserByEmail(email);
-    if (user && user.password === password) {
-      res.json({ success: true });
-    } else {
-      res.json({ success: false, message: 'Invalid email or password' });
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
     }
-  },
-  getAllUsers: (req, res) => {
-    res.json(getAllUsers());
-  },
-  getUserByEmail: (req, res) => {
-    const user = getUserByEmail(req.params.email);
+    const user = data.users.find(user => user.email === email && user.password === password);
     if (user) {
-      res.json(user);
+        res.json({ success: true });
     } else {
-      res.status(404).json({ message: 'User not found' });
+        res.json({ success: false, message: 'Invalid email or password' });
     }
-  },
-  addUser: (req, res) => {
-    try {
-      const { email, password, nickName, chooseFile } = req.body;
-      const db = readData();
-      const newUserId = db.users.length ? db.users[db.users.length - 1].userId + 1 : 1;
-      const newUser = {
+};
+
+const createUser = (req, res) => {
+    const { email, password, nickName, chooseFile } = req.body;
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const newUserId = data.users.length ? data.users[data.users.length - 1].userId + 1 : 1;
+    const newUser = {
         userId: newUserId,
         email,
         password,
         nickName,
         chooseFile
-      };
-      createUser(newUser);
-      res.status(201).json(newUser);
-    } catch (error) {
-      console.error('회원가입 처리 중 오류 발생:', error);
-      res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-  },
-  updateUser: (req, res) => {
-    try {
-      const { email, nickName, chooseFile } = req.body;
-      const updatedUserData = { nickName, chooseFile };
-      updateUser(email, updatedUserData);
-      res.json({ message: 'User updated' });
-    } catch (error) {
-      console.error('회원 정보 수정 중 오류 발생:', error);
-      res.status(500).json({ success: false, message: 'Internal server error' });
-    }
-  },
-  deleteUser: (req, res) => {
-    deleteUser(req.params.email);
-    res.json({ message: 'User deleted' });
-  }
+    };
+
+    data.users.push(newUser);
+    writeData(data);
+    res.json({ success: true, user: newUser });
 };
 
-const postController = {
-  getAllPosts: (req, res) => {
-    res.json(getAllPosts());
-  },
-  getPostById: (req, res) => {
-    const post = getPostById(parseInt(req.params.postId));
+const deleteUser = (req, res) => {
+    const { userId } = req.params;
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const userIndex = data.users.findIndex(user => user.userId === parseInt(userId));
+    if (userIndex === -1) {
+        res.status(404).json({ success: false, message: 'User not found' });
+        return;
+    }
+    data.users.splice(userIndex, 1);
+    writeData(data);
+    res.json({ success: true, message: 'User deleted successfully' });
+};
+
+const updateUser = (req, res) => {
+    const { userId } = req.params;
+    const { email, password, nickName, chooseFile } = req.body;
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const user = data.users.find(user => user.userId === parseInt(userId));
+    if (!user) {
+        res.status(404).json({ success: false, message: 'User not found' });
+        return;
+    }
+    if (email) user.email = email;
+    if (password) user.password = password;
+    if (nickName) user.nickName = nickName;
+    if (chooseFile) user.chooseFile = chooseFile;
+    writeData(data);
+    res.json({ success: true, user });
+};
+
+const getAllPosts = (req, res) => {
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    res.json(data.posts);
+};
+
+const getPostById = (req, res) => {
+    const postId = parseInt(req.params.postId, 10);
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const post = data.posts.find(post => post.postId === postId);
     if (post) {
-      res.json(post);
+        res.json(post);
     } else {
-      res.status(404).json({ message: 'Post not found' });
+        res.status(404).json({ success: false, message: 'Post not found' });
     }
-  },
-  addPost: (req, res) => {
-    createPost(req.body);
-    res.status(201).json(req.body);
-  },
-  updatePost: (req, res) => {
-    updatePost(req.params.postId, req.body);
-    res.json({ message: 'Post updated' });
-  },
-  deletePost: (req, res) => {
-    deletePost(req.params.postId);
-    res.json({ message: 'Post deleted' });
-  }
 };
 
-const commentController = {
-  getCommentsByPostId: (req, res) => {
-      try {
-          const comments = getCommentsByPostId(parseInt(req.params.postId));
-          res.json(comments);
-      } catch (error) {
-          res.status(500).json({ error: 'Failed to get comments' });
-      }
-  },
-  createComment: (req, res) => {
-      try {
-          const commentData = { postId: parseInt(req.params.postId), ...req.body };
-          createComment(commentData);
-          res.status(201).json(commentData);
-      } catch (error) {
-          res.status(500).json({ error: 'Failed to create comment' });
-      }
-  },
-  updateComment: (req, res) => {
-      try {
-          updateComment(req.params.commentId, req.body);
-          res.json({ message: 'Comment updated' });
-      } catch (error) {
-          res.status(500).json({ error: 'Failed to update comment' });
-      }
-  },
-  deleteComment: (req, res) => {
-      try {
-          deleteComment(req.params.commentId);
-          res.json({ message: 'Comment deleted' });
-      } catch (error) {
-          res.status(500).json({ error: 'Failed to delete comment' });
-      }
-  }
+const createPost = (req, res) => {
+    const newPost = req.body;
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    newPost.postId = data.posts.length + 1;
+    data.posts.push(newPost);
+    writeData(data);
+    res.json({ success: true, post: newPost });
+};
+
+const updatePost = (req, res) => {
+    const postId = parseInt(req.params.postId, 10);
+    const updatedPost = req.body;
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const postIndex = data.posts.findIndex(post => post.postId === postId);
+    if (postIndex !== -1) {
+        data.posts[postIndex] = { ...data.posts[postIndex], ...updatedPost };
+        writeData(data);
+        res.json({ success: true, post: data.posts[postIndex] });
+    } else {
+        res.status(404).json({ success: false, message: 'Post not found' });
+    }
+};
+
+const deletePost = (req, res) => {
+    const postId = parseInt(req.params.postId, 10);
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const postIndex = data.posts.findIndex(post => post.postId === postId);
+    if (postIndex === -1) {
+        res.status(404).json({ success: false, message: 'Post not found' });
+        return;
+    }
+    data.posts.splice(postIndex, 1);
+    writeData(data);
+    res.json({ success: true });
+};
+
+const getCommentsByPostId = (req, res) => {
+    const postId = parseInt(req.params.postId, 10);
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const comments = data.comments.filter(comment => comment.postId === postId);
+    res.json(comments);
+};
+
+const createComment = (req, res) => {
+    const postId = parseInt(req.params.postId, 10);
+    const newComment = req.body;
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    newComment.commentId = data.comments.length + 1;
+    newComment.postId = postId;
+    data.comments.push(newComment);
+    writeData(data);
+    res.json({ success: true, comment: newComment });
+};
+
+const updateComment = (req, res) => {
+    const postId = parseInt(req.params.postId, 10);
+    const commentId = parseInt(req.params.commentId, 10);
+    const updatedComment = req.body;
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const commentIndex = data.comments.findIndex(comment => comment.commentId === commentId && comment.postId === postId);
+    if (commentIndex === -1) {
+        res.status(404).json({ success: false, message: 'Comment not found' });
+        return;
+    }
+    data.comments[commentIndex] = { ...data.comments[commentIndex], ...updatedComment };
+    writeData(data);
+    res.json({ success: true, comment: data.comments[commentIndex] });
+};
+
+const deleteComment = (req, res) => {
+    const postId = parseInt(req.params.postId, 10);
+    const commentId = parseInt(req.params.commentId, 10);
+    const data = readData();
+    if (!data) {
+        res.status(500).json({ success: false, message: 'Internal server error' });
+        return;
+    }
+    const commentIndex = data.comments.findIndex(comment => comment.commentId === commentId && comment.postId === postId);
+    if (commentIndex === -1) {
+        res.status(404).json({ success: false, message: 'Comment not found' });
+        return;
+    }
+    data.comments.splice(commentIndex, 1);
+    writeData(data);
+    res.json({ success: true });
 };
 
 module.exports = {
-  userController,
-  postController,
-  commentController
+    login,
+    createUser,
+    deleteUser,
+    updateUser,
+    getAllPosts,
+    getPostById,
+    createPost,
+    updatePost,
+    deletePost,
+    getCommentsByPostId,
+    createComment,
+    updateComment,
+    deleteComment
 };
