@@ -16,6 +16,15 @@ const {
 } = require('./models.js');
 
 const userController = {
+  login: (req, res) => {
+    const { email, password } = req.body;
+    const user = getUserByEmail(email);
+    if (user && user.password === password) {
+      res.json({ success: true });
+    } else {
+      res.json({ success: false, message: 'Invalid email or password' });
+    }
+  },
   getAllUsers: (req, res) => {
     res.json(getAllUsers());
   },
